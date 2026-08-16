@@ -1,7 +1,7 @@
-const express = require('express');
-const cors = require('cors');
-const pinoHttp = require('pino-http');
-require('dotenv').config();
+import 'dotenv/config';
+import cors from 'cors';
+import express from 'express';
+import pinoHttp from 'pino-http';
 
 const app = express();
 const port = process.env.PORT || 3000;
