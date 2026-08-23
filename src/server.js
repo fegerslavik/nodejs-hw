@@ -18,7 +18,7 @@ app.get('/', (_req, res) => {
   res.send('Hello world');
 });
 
-app.use(notesRoutes);
+app.use('/notes', notesRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
