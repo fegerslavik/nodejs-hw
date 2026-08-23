@@ -5,14 +5,18 @@ const noteSchema = new Schema(
     title: {
       type: String,
       required: true,
+      trim: true,
     },
     content: {
       type: String,
-      required: true,
+      default: '',
+      trim: true,
     },
     tag: {
       type: String,
-      default: 'personal',
+      enum: ['Todo', 'Work', 'Personal', 'Shopping'],
+      default: 'Todo',
+      trim: true,
     },
   },
   {
