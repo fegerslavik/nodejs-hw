@@ -21,13 +21,13 @@ export const getAllNotes = async (req, res, next) => {
       ]);
     }
 
-    const totalNotes = await query.clone().countDocuments();
-    const totalPages = Math.ceil(totalNotes / numericPerPage) || 1;
-
-    const notes = await query
+    const notesQuery = query
       .skip((numericPage - 1) * numericPerPage)
       .limit(numericPerPage)
       .sort({ createdAt: -1 });
+
+    const [totalNotes, notes] = await Promise.all([query.clone().countDocuments(), notesQuery]);
+    const totalPages = Math.ceil(totalNotes / numericPerPage) || 1;
 
     res.status(200).json({
       page: numericPage,
