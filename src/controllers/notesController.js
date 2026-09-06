@@ -8,23 +8,23 @@ export const getAllNotes = async (req, res, next) => {
     const numericPage = Number(page) > 0 ? Number(page) : 1;
     const numericPerPage = Number(perPage) > 0 ? Number(perPage) : 10;
 
-    const filter = { userId: req.user._id };
+    const query = Note.find().where('userId').equals(req.user._id);
 
     if (tag) {
-      filter.tag = tag;
+      query.where('tag').equals(tag);
     }
 
     if (search) {
-      filter.$or = [
+      query.or([
         { title: { $regex: search, $options: 'i' } },
         { content: { $regex: search, $options: 'i' } },
-      ];
+      ]);
     }
 
-    const totalNotes = await Note.countDocuments(filter);
+    const totalNotes = await query.clone().countDocuments();
     const totalPages = Math.ceil(totalNotes / numericPerPage) || 1;
 
-    const notes = await Note.find(filter)
+    const notes = await query
       .skip((numericPage - 1) * numericPerPage)
       .limit(numericPerPage)
       .sort({ createdAt: -1 });
