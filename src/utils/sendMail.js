@@ -1,9 +1,15 @@
 import nodemailer from 'nodemailer';
 
-export const sendMail = async ({ to, subject, html, text }) => {
-  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM } = process.env;
+export const sendEmail = async ({
+  to,
+  subject,
+  html,
+  text,
+  from = process.env.SMTP_FROM || process.env.MAIL_FROM || process.env.SMTP_USER,
+}) => {
+  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD } = process.env;
 
-  if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASSWORD || !SMTP_FROM) {
+  if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASSWORD) {
     throw new Error('Missing SMTP configuration');
   }
 
@@ -18,12 +24,10 @@ export const sendMail = async ({ to, subject, html, text }) => {
   });
 
   return transporter.sendMail({
-    from: SMTP_FROM,
+    from,
     to,
     subject,
     html,
     text,
   });
 };
-
-export default sendMail;
