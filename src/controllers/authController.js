@@ -1,8 +1,23 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import bcrypt from 'bcrypt';
 import createHttpError from 'http-errors';
+import jwt from 'jsonwebtoken';
+import Handlebars from 'handlebars';
 import { User } from '../models/user.js';
 import { Session } from '../models/session.js';
 import { createSession, setSessionCookies } from '../services/auth.js';
+import { sendMail } from '../utils/sendMail.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const resetPasswordTemplatePath = path.join(
+  __dirname,
+  '..',
+  'templates',
+  'reset-password-email.html',
+);
 
 export const registerUser = async (req, res, next) => {
   try {
@@ -42,6 +57,55 @@ export const loginUser = async (req, res, next) => {
     setSessionCookies(res, session);
     res.status(200).json(user);
   } catch (error) {
+    next(error);
+  }
+};
+
+export const requestResetEmail = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(200).json({ message: 'Password reset email sent successfully' });
+    }
+
+    const token = jwt.sign(
+      {
+        sub: user._id.toString(),
+        email: user.email,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '15m' },
+    );
+
+    const frontendDomain = (process.env.FRONTEND_DOMAIN || '').replace(/\/$/, '');
+    const resetLink = `${frontendDomain}/reset-password?token=${token}`;
+    const templateSource = fs.readFileSync(resetPasswordTemplatePath, 'utf-8');
+    const template = Handlebars.compile(templateSource);
+    const html = template({
+      username: user.username || user.email,
+      resetLink,
+      frontendDomain,
+    });
+
+    try {
+      await sendMail({
+        to: user.email,
+        subject: 'Password reset request',
+        html,
+        text: `Reset your password: ${resetLink}`,
+      });
+    } catch (error) {
+      throw createHttpError(500, 'Failed to send the email, please try again later.');
+    }
+
+    return res.status(200).json({ message: 'Password reset email sent successfully' });
+  } catch (error) {
+    if (error && error.statusCode === 500) {
+      return next(error);
+    }
+
     next(error);
   }
 };
