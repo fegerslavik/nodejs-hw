@@ -8,7 +8,7 @@ import Handlebars from 'handlebars';
 import { User } from '../models/user.js';
 import { Session } from '../models/session.js';
 import { createSession, setSessionCookies } from '../services/auth.js';
-import { sendMail } from '../utils/sendMail.js';
+import { sendEmail } from '../utils/sendMail.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -90,7 +90,8 @@ export const requestResetEmail = async (req, res, next) => {
     });
 
     try {
-      await sendMail({
+      await sendEmail({
+        from: process.env.SMTP_FROM || process.env.MAIL_FROM || process.env.SMTP_USER,
         to: user.email,
         subject: 'Password reset request',
         html,
@@ -106,6 +107,37 @@ export const requestResetEmail = async (req, res, next) => {
       return next(error);
     }
 
+    next(error);
+  }
+};
+
+export const resetPassword = async (req, res, next) => {
+  try {
+    const { token, password } = req.body;
+
+    let payload;
+
+    try {
+      payload = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (error) {
+      throw createHttpError(401, 'Invalid or expired token');
+    }
+
+    const user = await User.findOne({
+      _id: payload.sub,
+      email: payload.email,
+    });
+
+    if (!user) {
+      throw createHttpError(404, 'User not found');
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    return res.status(200).json({ message: 'Password reset successfully' });
+  } catch (error) {
     next(error);
   }
 };
